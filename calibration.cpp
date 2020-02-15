@@ -21,19 +21,6 @@ Calibrator::Calibrator()
     setFocus();
     setModal(true);
 
-    int width = qt_screen->deviceWidth();
-    int height = qt_screen->deviceHeight();
-    int dx, dy;
-    QPoint *points = screenPoints;
-    dx = 50;
-    dy = 50;
-    points[0] = QPoint(dx, dy);
-    points[1] = QPoint(width - dx, dy);
-    points[2] = QPoint(width - dx, height - dy);
-    points[3] = QPoint(dx, height - dy);
-    points[4] = QPoint(width / 2, height / 2);
-
-    pressCount = 0;
 }
 
 int Calibrator::exec()
@@ -41,8 +28,8 @@ int Calibrator::exec()
     activateWindow();
     calibThread = new CalibThread ;
     if(calibThread->config()){
-        connect(calibThread, SIGNAL(nextPoint()),
-                this, SLOT(onNextPoint()), Qt::QueuedConnection);
+        connect(calibThread, SIGNAL(nextPoint(int,int)),
+                this, SLOT(onNextPoint(int,int)), Qt::QueuedConnection);
         calibThread->start();
         int ret = QDialog::exec();
         return ret;
@@ -58,10 +45,9 @@ void Calibrator::paintEvent(QPaintEvent*)
     p.begin(this);
     p.fillRect(rect(), Qt::white);
 
-    QPoint point = screenPoints[pressCount];
     // Map to logical coordinates in case the screen is transformed
     QSize screenSize(qt_screen->deviceWidth(), qt_screen->deviceHeight());
-    point = qt_screen->mapFromDevice(point, screenSize);
+    QPoint point = qt_screen->mapFromDevice(screenPoint, screenSize);
 
     p.fillRect(point.x() - 6, point.y() - 1, 13, 3, Qt::black);
     p.fillRect(point.x() - 1, point.y() - 6, 3, 13, Qt::black);
@@ -70,13 +56,6 @@ void Calibrator::paintEvent(QPaintEvent*)
 
 void Calibrator::accept()
 {
-    if(pressCount == 5){
-        printf("Calibration accept success, pressCount: 5");
-    }else{
-        printf("Error, pressCount is not 5");
-        return;
-    }
-
     if (calibThread->performCalibration()) {
         calibThread->calibrationWrite();
     } else {
@@ -90,10 +69,13 @@ void Calibrator::accept()
     QDialog::accept();
 }
 
-void Calibrator::onNextPoint()
+void Calibrator::onNextPoint(int x,int y)
 {
-    if (++pressCount < 5)
+    if (x>0 && y>0) {
+        screenPoint.setX(x);
+        screenPoint.setY(y);
         repaint();
+    }
     else
         accept();
 }
@@ -338,18 +320,30 @@ bool CalibThread::config()
 
 void CalibThread::run()
 {
-    getSample ( 0, 50,        50,        (char*)"Top left");
-    emit nextPoint();
+    int dx, dy;
+    dx = xres * 3 / 10;
+    dy = yres * 3 / 10;
 
-    getSample ( 1, xres - 50, 50,        (char*)"Top right");
-    emit nextPoint();
+    QPoint points[] = {
+        QPoint(dx, dy),
+        QPoint(xres - dx, dy),
+        QPoint(xres - dx, yres - dy),
+        QPoint(dx, yres - dy),
+        QPoint(xres / 2, yres / 2)
+    };
+    char* names[] = {
+        (char*)"Top left",
+        (char*)"Top right",
+        (char*)"Bot right",
+        (char*)"Bot left",
+        (char*)"Center"
+    };
 
-    getSample ( 2, xres - 50, yres - 50, (char*)"Bot right");
-    emit nextPoint();
+    for(int i=0;i<5;i++) {
+        QPoint *p = &points[i];
+        emit nextPoint(p->x(), p->y());
+        getSample ( i, p->x(), p->y(), names[i]);
+    }
 
-    getSample ( 3, 50,        yres - 50, (char*)"Bot left");
-    emit nextPoint();
-
-    getSample ( 4, xres / 2,  yres / 2,  (char*)"Center");
-    emit nextPoint();
+    emit nextPoint(-1,-1);
 }

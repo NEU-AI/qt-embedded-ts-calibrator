@@ -30,7 +30,7 @@ public:
     void run();
 
 signals:
-    void nextPoint();
+    void nextPoint(int x,int y);
 };
 
 class Calibrator : public QDialog
@@ -39,8 +39,7 @@ class Calibrator : public QDialog
 
 private:
     CalibThread* calibThread;
-    QPoint screenPoints[5];
-    int pressCount;
+    QPoint screenPoint;
 public:
     Calibrator();
     int exec();
@@ -48,7 +47,7 @@ protected:
     void paintEvent(QPaintEvent *);
     void accept();
 public slots:
-    void onNextPoint();
+    void onNextPoint(int x,int y);
 };
 
 #endif // CALIBRATION_H
