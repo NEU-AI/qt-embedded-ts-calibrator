@@ -3,7 +3,9 @@
 #include <QThread>
 #include <QDialog>
 #include <QPoint>
+#include <QLabel>
 #include <tslib.h>
+#include <QVBoxLayout>
 
 typedef struct {
     int x[5], xfb[5];
@@ -40,8 +42,11 @@ class Calibrator : public QDialog
 private:
     CalibThread* calibThread;
     QPoint screenPoint;
+    QLabel* labelAlert;
+    QVBoxLayout *layout;
 public:
     Calibrator();
+    ~Calibrator();
     int exec();
 protected:
     void paintEvent(QPaintEvent *);

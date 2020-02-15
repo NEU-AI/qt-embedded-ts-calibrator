@@ -21,6 +21,16 @@ Calibrator::Calibrator()
     setFocus();
     setModal(true);
 
+    layout = new QVBoxLayout(this);
+    labelAlert = new QLabel(this);
+    labelAlert->setText("Calibration");
+    layout->addWidget(labelAlert, Qt::AlignHCenter | Qt::AlignTop);
+}
+
+Calibrator::~Calibrator()
+{
+    delete labelAlert;
+    delete layout;
 }
 
 int Calibrator::exec()
